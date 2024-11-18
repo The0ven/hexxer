@@ -24,22 +24,32 @@ func main() {
     rl.SetTargetFPS(60)
 
     game := startGame()
+    scale := float32(1)
+    offsetW := screenWidth / 2
+    offsetH := screenHeight / 2
 
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
 
-        rl.ClearBackground(rl.RayWhite)
-        drawGame(game, screenWidth, screenHeight)
+        rl.ClearBackground(rl.Black)
+        scale = min(float32(10), max(float32(1), scale + rl.GetMouseWheelMove()))
+
+        
+
+        if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+            offsetW = int32(rl.GetMouseDelta().X) + offsetW
+            offsetH = int32(rl.GetMouseDelta().Y) + offsetH
+        }
+
+        drawGame(game, offsetW, offsetH, scale)
 
         rl.EndDrawing()
     }
 }
 
-func drawGame(game types.Game, width int32, height int32) {
-    offsetW := width / 2
-    offsetH := height / 2
+func drawGame(game types.Game, offsetW int32, offsetH int32, scale float32) {
     for tile := range game.Map {
-        hex := graphics.Hexagon(tile, 30, game.Map[tile].Colour, offsetW, offsetH)
+        hex := graphics.Hexagon(tile, 15 * scale, game.Map[tile].Colour, offsetW, offsetH)
         rl.DrawPoly(hex.Center, hex.Sides, hex.Radius, hex.Rotation, hex.Col)
     }
 }
