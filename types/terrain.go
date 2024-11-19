@@ -1,7 +1,9 @@
 package types
 
-import(
-    "image/color"
+import (
+	"image/color"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type TestTerrain struct {
@@ -17,11 +19,12 @@ type Terrain struct {
     VisionModifier int
     BlocksVision bool
     Coord Tile
+    Type string
 }
 
-func NewSea(colour color.RGBA, tile Tile) Terrain {
+func NewSea(tile Tile) Terrain {
     return Terrain{
-        colour,
+        rl.DarkBlue,
         false,
         0,
         0,
@@ -29,12 +32,13 @@ func NewSea(colour color.RGBA, tile Tile) Terrain {
         1,
         false,
         tile,
+        "Sea",
     }
 }
 
-func NewCoast(colour color.RGBA, tile Tile) Terrain {
+func NewCoast(tile Tile) Terrain {
     return Terrain{
-        colour,
+        rl.Beige,
         false,
         0,
         1,
@@ -42,12 +46,13 @@ func NewCoast(colour color.RGBA, tile Tile) Terrain {
         0,
         false,
         tile,
+        "Coast",
     }
 }
 
-func NewLand(colour color.RGBA, height int, tile Tile) Terrain {
+func NewLand(height int, tile Tile) Terrain {
     return Terrain{
-        colour,
+        rl.Brown,
         false,
         0,
         height,
@@ -55,12 +60,13 @@ func NewLand(colour color.RGBA, height int, tile Tile) Terrain {
         0,
         false,
         tile,
+        "Plains",
     }
 }
 
-func NewForest(colour color.RGBA, height int, tile Tile) Terrain {
+func NewForest(height int, tile Tile) Terrain {
     return Terrain{
-        colour,
+        rl.DarkGreen,
         false,
         -2,
         height,
@@ -68,12 +74,13 @@ func NewForest(colour color.RGBA, height int, tile Tile) Terrain {
         -2,
         true,
         tile,
+        "Forest",
     }
 }
 
-func NewHill(colour color.RGBA, height int, tile Tile) Terrain {
+func NewHill(height int, tile Tile) Terrain {
     return Terrain{
-        colour,
+        rl.Green,
         false,
         -1,
         height,
@@ -81,12 +88,13 @@ func NewHill(colour color.RGBA, height int, tile Tile) Terrain {
         1,
         true,
         tile,
+        "Hills",
     }
 }
 
-func NewMountain(colour color.RGBA, height int, tile Tile) Terrain {
+func NewMountain(height int, tile Tile) Terrain {
     return Terrain{
-        colour,
+        rl.White,
         true,
         -3,
         height,
@@ -94,5 +102,6 @@ func NewMountain(colour color.RGBA, height int, tile Tile) Terrain {
         1,
         true,
         tile,
+        "Mountain",
     }
 }
