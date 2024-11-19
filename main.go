@@ -47,21 +47,27 @@ func main() {
         drawGame(game, offsetW, offsetH, scale, currentTile)
         
         if mode == "tile" {
-            if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
+            if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
                 mouse := rl.GetMousePosition()
-                tile := graphics.PointToTile(mouse.X, mouse.Y, defaultRadius * scale, offsetH, offsetW)
+                tile := graphics.PointToTile(mouse.X, mouse.Y, defaultRadius * scale, offsetW, offsetH)
                 currentTile = &tile
             }
 
             if currentTile != nil {
                 drawTooltip(game, *currentTile, offsetW, offsetH, scale)
                 changeTile(game.Map, currentTile)
+                drawSeletedTile(currentTile, offsetW, offsetH, scale)
             }
 
         }
 
         rl.EndDrawing()
     }
+}
+
+func drawSeletedTile(currentTile *types.Tile, offsetW int32, offsetH int32, scale float32) {   
+    hex := graphics.Hexagon(*currentTile, defaultRadius * scale, rl.Red, offsetW, offsetH)
+    rl.DrawPolyLines(hex.Center, hex.Sides, hex.Radius, hex.Rotation, hex.Col)
 }
 
 func changeTile(gamemap map[types.Tile]types.Terrain, currentTile *types.Tile) {
