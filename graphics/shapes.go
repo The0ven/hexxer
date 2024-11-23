@@ -36,7 +36,7 @@ func PlaceTile(tile types.Tile, radius float32, offsetW int32, offsetH int32) rl
 func PointToTile(x float32, y float32, radius float32, offsetW int32, offsetH int32) types.Tile {
     x = x - float32(offsetW)
     y = y - float32(offsetH)
-    q := (math.Sqrt(3)/float64(3) * float64(x - float32(1)/float32(3) * y)) / float64(radius)
+    q := (math.Sqrt(3)/float64(3) * float64(x) - float64(float32(1)/float32(3) * y)) / float64(radius)
     r := float64(2)/float64(3) * float64(y) / float64(radius)
     return types.FracAxialTile{Q: q, R: r}.ToCubic().Round()
 }

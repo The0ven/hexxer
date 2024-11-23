@@ -14,7 +14,7 @@ import (
 )
 
 var defaultRadius = float32(15)
-var screenWidth = int32(1600)
+var screenWidth = int32(1300)
 var screenHeight = int32(850)
 
 func main() {
@@ -27,8 +27,8 @@ func main() {
 
     game := startGame()
     scale := float32(1)
-    offsetW := screenWidth / 2
-    offsetH := screenHeight / 2
+    offsetW := int32(float32(screenWidth) / float32(2))
+    offsetH := int32(float32(screenHeight) / float32(2))
     mode := "tile"
     var currentTile *types.Tile
 
