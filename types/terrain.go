@@ -80,7 +80,7 @@ func NewForest(height int, tile Tile) Terrain {
 
 func NewHill(height int, tile Tile) Terrain {
     return Terrain{
-        rl.Green,
+        rl.DarkGray,
         false,
         -1,
         height,

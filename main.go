@@ -16,6 +16,7 @@ import (
 var defaultRadius = float32(15)
 var screenWidth = int32(1300)
 var screenHeight = int32(850)
+var game = startTestGame()
 
 func main() {
     fmt.Println("Starting Up...")
@@ -25,7 +26,6 @@ func main() {
 
     rl.SetTargetFPS(60)
 
-    game := startGame()
     scale := float32(1)
     offsetW := int32(float32(screenWidth) / float32(2))
     offsetH := int32(float32(screenHeight) / float32(2))
@@ -35,8 +35,11 @@ func main() {
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
         rl.ClearBackground(rl.Black)
+        rl.DrawText(fmt.Sprintf("Map Len: %v", len(game.Map)), 20, 20, 20, rl.RayWhite)
 
-        scale = min(float32(10), max(float32(1), scale + rl.GetMouseWheelMove()))
+        mouse := rl.GetMousePosition()
+
+        scale = min(float32(20), max(float32(0.3), scale + rl.GetMouseWheelMove()))
         //TODO: Add support for sprite changes based on scale
 
         if rl.IsMouseButtonDown(rl.MouseButtonRight) {
@@ -44,24 +47,105 @@ func main() {
             offsetH = int32(rl.GetMouseDelta().Y) + offsetH
         }
 
-        drawGame(game, offsetW, offsetH, scale, currentTile)
+        drawGame(game, offsetW, offsetH, scale)
         
         if mode == "tile" {
             if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-                mouse := rl.GetMousePosition()
                 tile := graphics.PointToTile(mouse.X, mouse.Y, defaultRadius * scale, offsetW, offsetH)
                 currentTile = &tile
             }
 
             if currentTile != nil {
-                drawTooltip(game, *currentTile, offsetW, offsetH, scale)
+                drawTooltip(game, *currentTile)
                 changeTile(game.Map, currentTile)
                 drawSeletedTile(currentTile, offsetW, offsetH, scale)
             }
+        }
 
+        if mode == "menu" {
+            if rl.IsKeyPressed(rl.KeyTab) {
+                mode = "tile"
+            }
+            drawMenu(&game, mouse, offsetW, offsetH)
+        } else {
+            if rl.IsKeyPressed(rl.KeyTab) {
+                mode = "menu"
+            }
         }
 
         rl.EndDrawing()
+    }
+}
+
+func saveGame(game types.Game) {
+    teams := []types.Team{}
+    Map := []types.Terrain{}
+    units := []types.Unit{}
+    for _, t := range game.Teams {
+        teams = append(teams, t)
+    }
+    for _, tr := range game.Map {
+        Map = append(Map, tr)
+    }
+    for _, u := range game.Units {
+        units = append(units, u)
+    }
+    unmappedGame := types.UnmappedGame{Teams: teams, Map: Map, Units: units}
+    blob, err := json.Marshal(unmappedGame)
+    if err != nil {
+        fmt.Printf("Error marshalling!!!\n%v\n", err)
+    }
+    err = os.WriteFile("saved_game.json", blob, 0666)
+    if err != nil {
+        fmt.Printf("Error writing file!!!\n%v\n", err)
+    }
+}
+
+func loadGame() *types.Game {
+    file, err := os.Open("saved_game.json")
+    if err != nil {
+        fmt.Println(err)
+    }
+    defer file.Close()
+
+    fileBytes, err := io.ReadAll(file)
+    if err != nil {
+        fmt.Println(err)
+    }
+    
+    var ug types.UnmappedGame
+    err = json.Unmarshal(fileBytes, &ug)
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    game := types.NewGame(ug.Teams, ug.Map, ug.Units)
+    fmt.Printf("Len loaded game map: %v", len(game.Map))
+    return &game
+}
+
+func drawMenu(game *types.Game, mouse rl.Vector2, offsetW int32, offsetH int32) {
+    size := int32(30)
+    options := []string{"Exit", "Load", "Save"}
+    for idx, option := range options {
+        w := float32(rl.MeasureText(option, size)) + 40
+        h := float32(size) + 10
+        x := float32(offsetW) - w / float32(2)
+        y := float32(offsetH) - (h + 20) * float32(idx)
+
+        button := graphics.NewButton(x, y, w, h, option, rl.LightGray, rl.DarkGray)
+        button.DrawButton(size)
+        if button.IsPressed(mouse) {
+            fmt.Printf("Button %v pressed!\n", option)
+            switch option {
+            case "Exit":
+                rl.CloseWindow()
+            case "Save":
+                saveGame(*game)
+            case "Load":
+                *game = *loadGame()
+            }
+        }
     }
 }
 
@@ -98,20 +182,16 @@ func changeTile(gamemap map[types.Tile]types.Terrain, currentTile *types.Tile) {
     }
 }
 
-func drawGame(game types.Game, offsetW int32, offsetH int32, scale float32, currentTile *types.Tile) {
+func drawGame(game types.Game, offsetW int32, offsetH int32, scale float32) {
     for tile := range game.Map {
         hex := graphics.Hexagon(tile, defaultRadius * scale, game.Map[tile].Colour, offsetW, offsetH)
-        if currentTile != nil && *currentTile == tile {
-            rl.DrawText(fmt.Sprintf("Tile: %v\n %v", tile, hex.Center), 20, 61, 20, rl.White)
-        }
         rl.DrawPoly(hex.Center, hex.Sides, hex.Radius, hex.Rotation, hex.Col)
     }
 }
 
-func drawTooltip(game types.Game, tile types.Tile, offsetW int32, offsetH int32, scale float32) {
-    hex := graphics.Hexagon(tile, defaultRadius * scale, rl.Black, offsetW, offsetH)
-    rl.DrawText(fmt.Sprintf("Tile: %v\n %v", tile, hex.Center), 20, 20, 20, rl.White)
+func drawTooltip(game types.Game, tile types.Tile) {
     options := []string{"Sea","Coast","Plains","Forest","Hills","Mountains","None"}
+
     x := int32(screenWidth - 120)
     rl.DrawRectangle(x, screenHeight - 120, int32(11 * len(options) + 4), 94, color.RGBA{20, 0, 30, 88})
     for i, option := range options {
@@ -125,7 +205,7 @@ func drawTooltip(game types.Game, tile types.Tile, offsetW int32, offsetH int32,
     }
 }
 
-func startGame() types.Game {
+func startTestGame() types.Game {
     file, err := os.Open("testgame.json")
     if err != nil {
         fmt.Println(err)
