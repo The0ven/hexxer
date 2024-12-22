@@ -16,64 +16,92 @@ import (
 var defaultRadius = float32(15)
 var screenWidth = int32(1300)
 var screenHeight = int32(850)
-var game = startTestGame()
+var scale = float32(1)
+var offsetW = int32(float32(screenWidth) / float32(2))
+var offsetH = int32(float32(screenHeight) / float32(2))
+var modes = []string{"terrain", "units", "teams"}
+var mode = 0
+var menuIsActive = false
+var currentTile *types.Tile
+var mouse rl.Vector2
+var fogOfWarTeam = 0
 
 func main() {
     fmt.Println("Starting Up...")
 
     rl.InitWindow(screenWidth, screenHeight, "Hexxer")
+    var game = startTestGame()
     defer rl.CloseWindow()
 
     rl.SetTargetFPS(60)
+    rl.SetExitKey(rl.KeyNumLock)
 
-    scale := float32(1)
-    offsetW := int32(float32(screenWidth) / float32(2))
-    offsetH := int32(float32(screenHeight) / float32(2))
-    mode := "tile"
-    var currentTile *types.Tile
 
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
         rl.ClearBackground(rl.Black)
-        rl.DrawText(fmt.Sprintf("Map Len: %v", len(game.Map)), 20, 20, 20, rl.RayWhite)
+        rl.DrawText(fmt.Sprintf("Mode: %v", modes[mode]), 20, 20, 20, rl.RayWhite)
 
-        mouse := rl.GetMousePosition()
+        mouse = rl.GetMousePosition()
 
         scale = min(float32(20), max(float32(0.3), scale + rl.GetMouseWheelMove()))
-        //TODO: Add support for sprite changes based on scale
 
+        //Set current tile
+        if rl.IsMouseButtonDown(rl.MouseButtonLeft) && !menuIsActive {
+            tile := graphics.PointToTile(mouse.X, mouse.Y, defaultRadius * scale, offsetW, offsetH)
+            currentTile = &tile
+        }
+
+        //Zoom in-out
         if rl.IsMouseButtonDown(rl.MouseButtonRight) {
             offsetW = int32(rl.GetMouseDelta().X) + offsetW
             offsetH = int32(rl.GetMouseDelta().Y) + offsetH
         }
 
+        //Switch mode
+        if rl.IsKeyPressed(rl.KeyTab) {
+            if mode < len(modes)-1 {
+                mode += 1
+            } else {
+                mode = 0
+            }
+        }
+
+        //TODO: Add support for sprite changes based on scale
+        gameLoop(&game)
         drawGame(game, offsetW, offsetH, scale)
-        
-        if mode == "tile" {
-            if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-                tile := graphics.PointToTile(mouse.X, mouse.Y, defaultRadius * scale, offsetW, offsetH)
-                currentTile = &tile
-            }
-
-            if currentTile != nil {
-                drawTooltip(game, *currentTile)
-                changeTile(game.Map, currentTile)
-                drawSeletedTile(currentTile, offsetW, offsetH, scale)
-            }
-        }
-
-        if mode == "menu" {
-            if rl.IsKeyPressed(rl.KeyTab) {
-                mode = "tile"
-            }
-            drawMenu(&game, mouse, offsetW, offsetH)
-        } else {
-            if rl.IsKeyPressed(rl.KeyTab) {
-                mode = "menu"
-            }
-        }
+        drawUI(&game, mouse) 
 
         rl.EndDrawing()
+    }
+}
+
+func gameLoop(game *types.Game) {
+    if rl.IsKeyPressed(rl.KeyEscape) {
+        menuIsActive = !menuIsActive
+    }
+    switch modes[mode] {
+    case "terrain":
+        if currentTile != nil {
+            changeTileTerrain(game.Map, currentTile)
+        }
+    case "units":
+        if currentTile != nil {
+            changeTileUnit(game.Units, currentTile)
+            // TEAM CHANGE BROKEN TODO: FIX IT
+            changeTileTeam(game, currentTile)
+        }
+    }
+}
+
+func changeTileTeam(game *types.Game, currentTile *types.Tile) {
+    if unit, ok := game.Units[*currentTile]; ok && rl.IsKeyPressed(rl.KeyT) {
+        if unit.Team < len(game.Teams){
+            unit.Team += 1
+            fmt.Printf("Unit: %v\n", game.Teams[unit.Team].Name)
+        } else {
+            unit.Team = 1
+        }
     }
 }
 
@@ -120,7 +148,7 @@ func loadGame() *types.Game {
     }
 
     game := types.NewGame(ug.Teams, ug.Map, ug.Units)
-    fmt.Printf("Len loaded game map: %v", len(game.Map))
+    fmt.Printf("Len loaded game map: %v\n", len(game.Map))
     return &game
 }
 
@@ -133,8 +161,8 @@ func drawMenu(game *types.Game, mouse rl.Vector2, offsetW int32, offsetH int32) 
         x := float32(offsetW) - w / float32(2)
         y := float32(offsetH) - (h + 20) * float32(idx)
 
-        button := graphics.NewButton(x, y, w, h, option, rl.LightGray, rl.DarkGray)
-        button.DrawButton(size)
+        button := graphics.NewTextButton(x, y, size, option, rl.LightGray, rl.DarkGray)
+        button.DrawTextButton()
         if button.IsPressed(mouse) {
             fmt.Printf("Button %v pressed!\n", option)
             switch option {
@@ -150,46 +178,137 @@ func drawMenu(game *types.Game, mouse rl.Vector2, offsetW int32, offsetH int32) 
 }
 
 func drawSeletedTile(currentTile *types.Tile, offsetW int32, offsetH int32, scale float32) {   
+    if currentTile == nil {
+        return
+    }
     hex := graphics.Hexagon(*currentTile, defaultRadius * scale, rl.Red, offsetW, offsetH)
     rl.DrawPolyLines(hex.Center, hex.Sides, hex.Radius, hex.Rotation, hex.Col)
 }
 
-func changeTile(gamemap map[types.Tile]types.Terrain, currentTile *types.Tile) {
+func changeTileTerrain(gamemap map[types.Tile]types.Terrain, currentTile *types.Tile) {
     var result = types.Terrain{}
-    if rl.IsKeyPressed(rl.KeyZero) {
+
+    switch rl.GetKeyPressed() {
+    case rl.KeyZero:
         delete(gamemap, *currentTile)
-    }
-    if rl.IsKeyPressed(rl.KeyOne) {
+    case rl.KeyOne:
         result = types.NewSea(*currentTile)
-    }
-    if rl.IsKeyPressed(rl.KeyTwo) {
+    case rl.KeyTwo:
         result = types.NewCoast(*currentTile)
-    }
-    if rl.IsKeyPressed(rl.KeyThree) {
+    case rl.KeyThree:
         result = types.NewLand(2, *currentTile)
-    }
-    if rl.IsKeyPressed(rl.KeyFour) {
+    case rl.KeyFour:
         result = types.NewForest(2, *currentTile)
-    }
-    if rl.IsKeyPressed(rl.KeyFive) {
+    case rl.KeyFive:
         result = types.NewHill(3, *currentTile)
-    }
-    if rl.IsKeyPressed(rl.KeySix) {
+    case rl.KeySix:
         result = types.NewMountain(4, *currentTile)
     }
+
     if result != (types.Terrain{}) {
         gamemap[*currentTile] = result
     }
 }
 
+func changeTileUnit(gameUnits map[types.Tile]types.Unit, currentTile *types.Tile) {
+    var result = types.Unit{}
+
+    switch rl.GetKeyPressed() {
+    case rl.KeyZero:
+        delete(gameUnits, *currentTile)
+    case rl.KeyOne:
+        result = types.NewInfantry(*currentTile)
+    case rl.KeyTwo:
+        result = types.NewHeavyInfantry(*currentTile)
+    case rl.KeyThree:
+        result = types.NewLightCavalry(*currentTile)
+    case rl.KeyFour:
+        result = types.NewHeavyCavalry(*currentTile)
+    case rl.KeyFive:
+        result = types.NewRanged(*currentTile)
+    case rl.KeySix:
+        result = types.NewScout(*currentTile)
+    }
+
+    if result != (types.Unit{}) {
+        gameUnits[*currentTile] = result
+    }
+}
+
 func drawGame(game types.Game, offsetW int32, offsetH int32, scale float32) {
+    drawTiles(game, offsetW, offsetH, scale)
+    switch modes[mode] {
+    case "units":
+        drawUnits(game, offsetW, offsetH, scale)
+    case "teams":
+        drawUnits(game, offsetW, offsetH, scale)
+        drawFogOfWar(game, offsetW, offsetH, scale)
+    }
+}
+
+func drawFogOfWar(game types.Game, offsetW int32, offsetH int32, scale float32) {
+    return
+}
+
+func drawTiles(game types.Game, offsetW int32, offsetH int32, scale float32) {
     for tile := range game.Map {
         hex := graphics.Hexagon(tile, defaultRadius * scale, game.Map[tile].Colour, offsetW, offsetH)
         rl.DrawPoly(hex.Center, hex.Sides, hex.Radius, hex.Rotation, hex.Col)
     }
 }
 
-func drawTooltip(game types.Game, tile types.Tile) {
+func drawUnits(game types.Game, offsetW int32, offsetH int32, scale float32) {
+    for unitTile := range game.Units {
+        unit := game.Units[unitTile]
+        marker := graphics.Circle(unitTile, (defaultRadius) * scale, game.Teams[unit.Team].Colour, offsetW, offsetH)
+        rl.DrawCircleV(marker.Center, marker.Radius/2, marker.Col)
+        rl.DrawCircleLinesV(marker.Center, marker.Radius/2, rl.DarkGray)
+    }
+}
+
+func drawUI(game *types.Game, mouse rl.Vector2) {
+    switch modes[mode] {
+    case "terrain":
+        if currentTile != nil {
+            drawTerrainTooltip(*game, *currentTile)
+        }
+    case "units":
+        if currentTile != nil {
+            drawUnitTooltip(*game, *currentTile)
+        }
+    case "teams":
+        if currentTile != nil {
+            drawTeamTooltip(*game, *currentTile)
+        }
+    }
+
+    drawSeletedTile(currentTile, offsetW, offsetH, scale)
+
+    if menuIsActive {
+        drawMenu(game, mouse, offsetW, offsetH)
+    }
+}
+
+func drawUnitTooltip(game types.Game, tile types.Tile) {
+    unit, ok := game.Units[tile]
+
+    x := int32(screenWidth - 170)
+    y := int32(screenHeight - 40)
+    if ok {
+        team := game.Teams[unit.Team]
+        
+        rl.DrawRectangle(x-6, y-26, 170, 50, team.Colour)
+
+        rl.DrawText(unit.Name, x, y, 20, rl.RayWhite)
+        rl.DrawText(fmt.Sprintf("Strength: %v", unit.Strength), x, y - 21, 20, rl.RayWhite)
+    }
+}
+
+func drawTeamTooltip(game types.Game, tile types.Tile) {
+    return
+}
+
+func drawTerrainTooltip(game types.Game, tile types.Tile) {
     options := []string{"Sea","Coast","Plains","Forest","Hills","Mountains","None"}
 
     x := int32(screenWidth - 120)
@@ -223,10 +342,19 @@ func startTestGame() types.Game {
         fmt.Println(err)
     }
 
-    return types.NewGame([]types.Team{}, testGame(ug.Map), []types.Unit{})
+    return types.NewGame(testGameTeams(), testGameTerrain(ug.Map), []types.Unit{})
 }
 
-func testGame(tiles []types.Tile) []types.Terrain {
+func testGameTeams() []types.Team {
+    results := []types.Team{}
+
+    results = append(results, types.Team{Colour: rl.Blue, Name: "Goodie Guys", Id: 1})
+    results = append(results, types.Team{Colour: rl.Red, Name: "Evil Lebarons", Id: 2})
+
+    return results
+}
+
+func testGameTerrain(tiles []types.Tile) []types.Terrain {
     results := []types.Terrain{}
 
     for _, tile := range tiles {

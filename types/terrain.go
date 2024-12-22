@@ -102,6 +102,6 @@ func NewMountain(height int, tile Tile) Terrain {
         1,
         true,
         tile,
-        "Mountain",
+        "Mountains",
     }
 }
