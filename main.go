@@ -15,16 +15,19 @@ import (
 var screenWidth = int32(1300)
 var screenHeight = int32(850)
 
+
 func main() {
     fmt.Println("Starting Up...")
 
     rl.InitWindow(screenWidth, screenHeight, "Hexxer")
     defer rl.CloseWindow()
     rl.SetTargetFPS(60)
+    rl.SetExitKey(rl.KeyNumLock)
 
     // Initialize game and starting state
     game := startTestGame()
     var state states.GameState = states.NewTileMode(&game)
+
 
     for !rl.WindowShouldClose() {
         state.HandleInput()
@@ -58,10 +61,19 @@ func startTestGame() types.Game {
         fmt.Println(err)
     }
 
-    return types.NewGame([]types.Team{}, testGame(ug.Map), []types.Unit{})
+    return types.NewGame(testGameTeams(), testGameTerrain(ug.Map), []types.Unit{})
 }
 
-func testGame(tiles []types.Tile) []types.Terrain {
+func testGameTeams() []types.Team {
+    results := []types.Team{}
+
+    results = append(results, types.Team{Colour: rl.Blue, Name: "Goodie Guys", Id: 1})
+    results = append(results, types.Team{Colour: rl.Red, Name: "Evil Lebarons", Id: 2})
+
+    return results
+}
+
+func testGameTerrain(tiles []types.Tile) []types.Terrain {
     results := []types.Terrain{}
 
     for _, tile := range tiles {

@@ -17,13 +17,13 @@ func NewMenuMode(game *types.Game, prev GameState) *MenuMode {
 }
 
 func (m *MenuMode) HandleInput() {
-    if rl.IsKeyPressed(rl.KeyTab) {
+    if rl.IsKeyPressed(rl.KeyEscape) {
         return
     }
 }
 
 func (m *MenuMode) Update() GameState {
-    if rl.IsKeyPressed(rl.KeyTab) {
+    if rl.IsKeyPressed(rl.KeyEscape) {
         return m.previousMode
     }
     return m
