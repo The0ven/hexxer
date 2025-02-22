@@ -1,7 +1,6 @@
 package states
 
 import (
-	"fmt"
 	"hexxer/graphics"
 	"hexxer/render"
 	"hexxer/types"
@@ -32,7 +31,7 @@ func (t *TileMode) HandleInput() {
     }
 
     t.scale = min(float32(20), max(float32(0.3), t.scale + rl.GetMouseWheelMove()))
-    rl.DrawText(fmt.Sprintf("Tile: %v", t.selectedTile), 20, 40, 20, rl.RayWhite)
+    // rl.DrawText(fmt.Sprintf("Tile: %v", t.selectedTile), 20, 40, 20, rl.RayWhite)
 
     if rl.IsMouseButtonDown(rl.MouseButtonRight) {
         t.offsetW += int32(rl.GetMouseDelta().X)
@@ -67,7 +66,7 @@ func (t *TileMode) Draw() {
     }
 }
 
-var keyMappings = map[int32]func(t types.Tile) types.Terrain{
+var tileKeyMappings = map[int32]func(t types.Tile) types.Terrain{
         rl.KeyOne:   func(t types.Tile) types.Terrain { return types.NewSea(t) },
         rl.KeyTwo:   func(t types.Tile) types.Terrain { return types.NewCoast(t) },
         rl.KeyThree: func(t types.Tile) types.Terrain { return types.NewLand(2, t) },
@@ -86,7 +85,7 @@ func (t *TileMode) changeTile() {
         return
     }
 
-    if action, exists := keyMappings[rl.GetKeyPressed()]; exists {
+    if action, exists := tileKeyMappings[rl.GetKeyPressed()]; exists {
         t.game.Map[*t.selectedTile] = action(*t.selectedTile)
     }
 }

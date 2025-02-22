@@ -68,7 +68,7 @@ func NewForest(height int, tile Tile) Terrain {
     return Terrain{
         rl.DarkGreen,
         false,
-        -2,
+        -1,
         height,
         false,
         -2,

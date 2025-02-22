@@ -10,26 +10,32 @@ import (
 
 func DrawUnits(game types.Game, offsetW int32, offsetH int32, scale float32) {
     for tile, unit := range game.Units {
-        marker := graphics.Circle(tile, (15) * scale, game.Teams[unit.Team].Colour, offsetW, offsetH)
+        marker := graphics.Circle(tile, float32(15) * scale, game.Teams[unit.Team].Colour, offsetW, offsetH)
         rl.DrawCircleV(marker.Center, marker.Radius/2, marker.Col)
         rl.DrawCircleLinesV(marker.Center, marker.Radius/2, rl.DarkGray)
     }
 }
 
-func DrawSeletedUnit(selectedUnit *types.Unit, offsetW int32, offsetH int32, scale float32) {
-    marker := graphics.Circle(selectedUnit.Coord, (15) * scale, rl.White, offsetW, offsetH)
+func DrawSeletedUnit(selectedUnit *types.Unit, movementRange []types.Tile, offsetW int32, offsetH int32, scale float32) {
+    marker := graphics.Circle(selectedUnit.Coord, float32(15) * scale, rl.White, offsetW, offsetH)
     rl.DrawCircleLinesV(marker.Center, marker.Radius/2, rl.Red)
 
     // Draw movement range
-    for _, moveTile := range selectedUnit.MovementRange() {
-        movePos := graphics.PlaceTile(moveTile, 15*scale, offsetW, offsetH)
-        rl.DrawCircle(int32(movePos.X), int32(movePos.Y), 5*scale, rl.Green)
+    for _, moveTile := range movementRange {
+        if moveTile == selectedUnit.Coord {
+            continue
+        }
+        movePos := graphics.Circle(moveTile, float32(15) * scale, rl.White, offsetW, offsetH)
+        rl.DrawCircleV(movePos.Center, movePos.Radius/2, rl.Green)
     }
 
     // Draw sight range
     for _, sightTile := range selectedUnit.SightRange() {
-        sightPos := graphics.PlaceTile(sightTile, 15*scale, offsetW, offsetH)
-        rl.DrawCircleLines(int32(sightPos.X), int32(sightPos.Y), 6*scale, rl.Blue)
+        if sightTile == selectedUnit.Coord {
+            continue
+        }
+        sightPos := graphics.Circle(sightTile, float32(15) * scale, rl.White, offsetW, offsetH)
+        rl.DrawCircleLinesV(sightPos.Center, 6*scale, rl.Blue)
     }
 }
 
